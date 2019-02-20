@@ -52,12 +52,16 @@ ESP8266HTTPUpdateServer httpUpdateServer;
 
 #include "FSBrowser.h"
 
-#define DATA_PIN      D5
+//#define DATA_PIN      D5
 #define LED_TYPE      WS2811
 #define COLOR_ORDER   RGB
-#define NUM_LEDS      200
+//#define NUM_LEDS      200
 
-#define MILLI_AMPS         2000 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
+#define NUM_STRIPS 6
+#define NUM_LEDS_PER_STRIP 50
+#define NUM_LEDS NUM_LEDS_PER_STRIP * NUM_STRIPS
+
+#define MILLI_AMPS         10000 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
 #define FRAMES_PER_SECOND  120  // here you can control the speed. With the Access Point / Web Server the animations run a bit slower.
 
 const bool apMode = false;
@@ -143,6 +147,7 @@ typedef PatternAndName PatternAndNameList[];
 // List of patterns to cycle through.  Each is defined as a separate function below.
 
 PatternAndNameList patterns = {
+  { multi_test,             "Multi Test" },
   { pride,                  "Pride" },
   { colorWaves,             "Color Waves" },
 
@@ -222,8 +227,16 @@ void setup() {
   delay(100);
   Serial.setDebugOutput(true);
 
-  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);         // for WS2812 (Neopixel)
-  //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS); // for APA102 (Dotstar)
+  // FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);         // for WS2812 (Neopixel)
+  // FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS); // for APA102 (Dotstar)
+
+  FastLED.addLeds<LED_TYPE, D1, COLOR_ORDER>(leds,  0 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, D2, COLOR_ORDER>(leds,  1 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, D5, COLOR_ORDER>(leds,  2 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, D6, COLOR_ORDER>(leds,  3 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, D7, COLOR_ORDER>(leds,  4 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, D8, COLOR_ORDER>(leds,  5 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP).setCorrection(TypicalLEDStrip);
+
   FastLED.setDither(false);
   FastLED.setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(brightness);
@@ -1265,4 +1278,37 @@ void palettetest( CRGB* ledarray, uint16_t numleds, const CRGBPalette16& gCurren
   static uint8_t startindex = 0;
   startindex--;
   fill_palette( ledarray, numleds, startindex, (256 / NUM_LEDS) + 1, gCurrentPalette, 255, LINEARBLEND);
+}
+
+void multi_test() {
+  static bool debug = true;
+  
+  const uint8_t step = (256 / NUM_STRIPS);
+
+  if (debug) {
+    Serial.print("step: ");
+    Serial.println(step);
+  }
+  
+  for (uint8_t strip = 0; strip < NUM_STRIPS; strip++) {
+    uint8_t hue = gHue + strip * step;
+    CHSV c = CHSV(hue, 255, 255);
+    
+    if (debug) {
+      Serial.print("hue: ");
+      Serial.println(hue);
+    }
+      
+    for (uint16_t i = 0; i < NUM_LEDS_PER_STRIP; i++) {
+      uint16_t j = i + strip * NUM_LEDS_PER_STRIP;
+      leds[j] = c;
+
+      if (debug) {
+        Serial.print("j: ");
+        Serial.println(j);
+      }
+    }
+  }
+
+  debug = false;
 }
