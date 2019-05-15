@@ -168,10 +168,10 @@ PatternAndNameList patterns = {
   { pride,                  "Pride" },
   { colorWaves,             "Color Waves" },
 
-  { chaseRainbow3,          "Chase Rainbow 3" },
+//  { chaseRainbow3,          "Chase Rainbow 3" },
   { chasePalette,           "Chase Palette" },
   { chasePalette2,          "Chase Palette 2" },
-  { chasePalette3,          "Chase Palette 3" },
+//  { chasePalette3,          "Chase Palette 3" },
   { solidPalette,           "Solid Palette" },
   { solidRainbow,           "Solid Rainbow" },
   
@@ -260,7 +260,7 @@ void setup() {
   FastLED.show();
 
   EEPROM.begin(512);
-  loadSettings();
+//  loadSettings();
 
   FastLED.setBrightness(brightness);
 
@@ -1046,20 +1046,20 @@ void chaseRainbow2() {
   }
 }
 
-void chaseRainbow3()
-{
-  fadeToBlackBy(leds, NUM_LEDS, 20);
-  CHSV color = CHSV(gHue, 220, 255);
-  int pos = beatsaw8(120, 0, NUM_LEDS - 1);
-  static int prevpos = 0;
-  if ( pos < prevpos ) {
-    fill_solid(leds + prevpos, NUM_LEDS - prevpos, color);
-    fill_solid(0, pos + 1, color);
-  } else {
-    fill_solid(leds + prevpos, (pos - prevpos) + 1, color);
-  }
-  prevpos = pos;
-}
+//void chaseRainbow3()
+//{
+//  fadeToBlackBy(leds, NUM_LEDS, 20);
+//  CHSV color = CHSV(gHue, 220, 255);
+//  int pos = beatsaw8(120, 0, NUM_LEDS - 1);
+//  static int prevpos = 0;
+//  if ( pos < prevpos ) {
+//    fill_solid(leds + prevpos, NUM_LEDS - prevpos, color);
+//    fill_solid(0, pos + 1, color);
+//  } else {
+//    fill_solid(leds + prevpos, (pos - prevpos) + 1, color);
+//  }
+//  prevpos = pos;
+//}
 
 void chasePalette() {
   for (uint16_t i = NUM_LEDS - 1; i > 0; i--) {
@@ -1076,20 +1076,20 @@ void chasePalette2() {
   }
 }
 
-void chasePalette3()
-{
-  fadeToBlackBy(leds, NUM_LEDS, 20);
-  CRGB color = ColorFromPalette(gCurrentPalette, gHue);
-  int pos = beatsaw8(120, 0, NUM_LEDS - 1);
-  static int prevpos = 0;
-  if ( pos < prevpos ) {
-    fill_solid(leds + prevpos, NUM_LEDS - prevpos, color);
-    fill_solid(0, pos + 1, color);
-  } else {
-    fill_solid(leds + prevpos, (pos - prevpos) + 1, color);
-  }
-  prevpos = pos;
-}
+//void chasePalette3()
+//{
+//  fadeToBlackBy(leds, NUM_LEDS, 20);
+//  CRGB color = ColorFromPalette(gCurrentPalette, gHue);
+//  int pos = beatsaw8(120, 0, NUM_LEDS - 1);
+//  static int prevpos = 0;
+//  if ( pos < prevpos ) {
+//    fill_solid(leds + prevpos, NUM_LEDS - prevpos, color);
+//    fill_solid(0, pos + 1, color);
+//  } else {
+//    fill_solid(leds + prevpos, (pos - prevpos) + 1, color);
+//  }
+//  prevpos = pos;
+//}
 
 void solidRainbow()
 {
