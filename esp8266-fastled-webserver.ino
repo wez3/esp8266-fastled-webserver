@@ -53,12 +53,27 @@ ESP8266HTTPUpdateServer httpUpdateServer;
 #include "FSBrowser.h"
 
 #define DATA_PIN      D5
-#define LED_TYPE      WS2811
-#define COLOR_ORDER   RGB
-#define NUM_LEDS      200
+#define LED_TYPE      WS2812B
+#define COLOR_ORDER   GRB
+#define NUM_LEDS      120
 
 #define MILLI_AMPS         2000 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
-#define FRAMES_PER_SECOND  120  // here you can control the speed. With the Access Point / Web Server the animations run a bit slower.
+#define FRAMES_PER_SECOND  60  // here you can control the speed. With the Access Point / Web Server the animations run a bit slower.
+
+// maps for 30 x 30
+const uint8_t coordsX[NUM_LEDS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+const uint8_t coordsY[NUM_LEDS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+const uint8_t coordsX256[NUM_LEDS] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 16, 25, 33, 41, 49, 58, 66, 74, 82, 90, 99, 107, 115, 123, 132, 140, 148, 156, 165, 173, 181, 189, 197, 206, 214, 222, 230, 239, 247, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 247, 239, 230, 222, 214, 206, 197, 189, 181, 173, 165, 156, 148, 140, 132, 123, 115, 107, 99, 90, 82, 74, 66, 58, 49, 41, 33, 25, 16, 8 };
+const uint8_t coordsY256[NUM_LEDS] = { 8, 16, 25, 33, 41, 49, 58, 66, 74, 82, 90, 99, 107, 115, 123, 132, 140, 148, 156, 165, 173, 181, 189, 197, 206, 214, 222, 230, 239, 247, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 247, 239, 230, 222, 214, 206, 197, 189, 181, 173, 165, 156, 148, 140, 132, 123, 115, 107, 99, 90, 82, 74, 66, 58, 49, 41, 33, 25, 16, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+// large gate, LEDS run up, across, down, across
+const uint8_t coordsHeat[NUM_LEDS] = { 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
+
+#define MATRIX_WIDTH 32
+#define MATRIX_HEIGHT 32
+
+#define MAX_DIMENSION ((MATRIX_WIDTH > MATRIX_HEIGHT) ? MATRIX_WIDTH : MATRIX_HEIGHT)
 
 const bool apMode = false;
 
@@ -1130,46 +1145,59 @@ void radialPaletteShift()
 // based on FastLED example Fire2012WithPalette: https://github.com/FastLED/FastLED/blob/master/examples/Fire2012WithPalette/Fire2012WithPalette.ino
 void heatMap(CRGBPalette16 palette, bool up)
 {
-  fill_solid(leds, NUM_LEDS, CRGB::Black);
-
-  // Add entropy to random number generator; we use a lot of it.
-  random16_add_entropy(random(256));
+  const uint16_t kMatrixHeight = NUM_LEDS / 2;
+  const uint16_t maxY = kMatrixHeight - 1;
 
   // Array of temperature readings at each simulation cell
-  static byte heat[NUM_LEDS];
+  static byte heat[2][kMatrixHeight];
 
-  byte colorindex;
+  for (int x = 0; x < 2; x++)
+  {
+    // Add entropy to random number generator; we use a lot of it.
+    random16_add_entropy(random(256));
 
-  // Step 1.  Cool down every cell a little
-  for ( uint16_t i = 0; i < NUM_LEDS; i++) {
-    heat[i] = qsub8( heat[i],  random8(0, ((cooling * 10) / NUM_LEDS) + 2));
-  }
+    // Step 1.  Cool down every cell a little
+    for ( int i = 0; i < kMatrixHeight; i++) {
+      heat[x][i] = qsub8( heat[x][i],  random8(0, ((cooling * 10) / kMatrixHeight) + 2));
+    }
 
-  // Step 2.  Heat from each cell drifts 'up' and diffuses a little
-  for ( uint16_t k = NUM_LEDS - 1; k >= 2; k--) {
-    heat[k] = (heat[k - 1] + heat[k - 2] + heat[k - 2] ) / 3;
-  }
+    // Step 2.  Heat from each cell drifts 'up' and diffuses a little
+    for ( int k = kMatrixHeight - 1; k >= 2; k--) {
+      heat[x][k] = (heat[x][k - 1] + heat[x][k - 2] + heat[x][k - 2] ) / 3;
+    }
 
-  // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
-  if ( random8() < sparking ) {
-    int y = random8(7);
-    heat[y] = qadd8( heat[y], random8(160, 255) );
+    // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
+    if ( random8() < sparking ) {
+      int y = random8(3);
+      heat[x][y] = qadd8( heat[x][y], random8(160, 255) );
+    }
   }
 
   // Step 4.  Map from heat cells to LED colors
-  for ( uint16_t j = 0; j < NUM_LEDS; j++) {
-    // Scale the heat value from 0-255 down to 0-240
-    // for best results with color palettes.
-    colorindex = scale8(heat[j], 190);
+  for (uint16_t i = 0; i < NUM_LEDS; i++)
+  {
+    uint8_t colorIndex = 0;
 
-    CRGB color = ColorFromPalette(palette, colorindex);
+    uint8_t x = 0;
 
-    if (up) {
-      leds[j] = color;
+    if (i >= kMatrixHeight) {
+      x = 1;
     }
-    else {
-      leds[(NUM_LEDS - 1) - j] = color;
-    }
+
+    uint16_t y = coordsHeat[i];
+
+    if (!up)
+      colorIndex = heat[x][(maxY) - y];
+    else
+      colorIndex = heat[x][y];
+
+    // Recommend that you use values 0-240 rather than
+    // the usual 0-255, as the last 15 colors will be
+    // 'wrapping around' from the hot end to the cold end,
+    // which looks wrong.
+    colorIndex = scale8(colorIndex, 240);
+
+    leds[i] = ColorFromPalette(palette, colorIndex, 255, LINEARBLEND);
   }
 }
 
