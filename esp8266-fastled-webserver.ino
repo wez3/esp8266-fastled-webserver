@@ -133,6 +133,7 @@ unsigned long autoPlayTimeout = 0;
 uint8_t currentPaletteIndex = 0;
 
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
+uint8_t hueFast = 0; // faster rotating "base color" used by many of the patterns
 
 CRGB solidColor = CRGB::Blue;
 
@@ -158,9 +159,22 @@ typedef PatternAndName PatternAndNameList[];
 // List of patterns to cycle through.  Each is defined as a separate function below.
 
 PatternAndNameList patterns = {
+  { fire,                   "Fire" },
+  { juggle,                 "Juggle" },
+  
+  { chaseRainbow,           "Chase Rainbow" },
+  { chaseRainbow2,          "Chase Rainbow 2" },
+  
   { pride,                  "Pride" },
   { colorWaves,             "Color Waves" },
 
+  { chaseRainbow3,          "Chase Rainbow 3" },
+  { chasePalette,           "Chase Palette" },
+  { chasePalette2,          "Chase Palette 2" },
+  { chasePalette3,          "Chase Palette 3" },
+  { solidPalette,           "Solid Palette" },
+  { solidRainbow,           "Solid Rainbow" },
+  
   // twinkle patterns
   { rainbowTwinkles,        "Rainbow Twinkles" },
   { snowTwinkles,           "Snow Twinkles" },
@@ -189,8 +203,7 @@ PatternAndNameList patterns = {
   { confetti,               "Confetti" },
   { sinelon,                "Sinelon" },
   { bpm,                    "Beat" },
-  { juggle,                 "Juggle" },
-  { fire,                   "Fire" },
+  { juggle2,                "Juggle 2" },
   { water,                  "Water" },
 
   { showSolidColor,         "Solid Color" }
@@ -523,6 +536,10 @@ void loop() {
     // slowly blend the current palette to the next
     nblendPaletteTowardPalette( gCurrentPalette, gTargetPalette, 8);
     gHue++;  // slowly cycle the "base color" through the rainbow
+  }
+
+  EVERY_N_MILLISECONDS( 4 ) {
+    hueFast++;  // slowly cycle the "base color" through the rainbow
   }
 
   if (autoplay && (millis() > autoPlayTimeout)) {
@@ -971,6 +988,26 @@ void setBrightness(uint8_t value)
   broadcastInt("brightness", brightness);
 }
 
+// returns an 8-bit value that
+// rises and falls in a sawtooth wave, 'BPM' times per minute,
+// between the values of 'low' and 'high'.
+//
+//       /|      /|
+//     /  |    /  |
+//   /    |  /    |
+// /      |/      |
+//
+uint8_t beatsaw8( accum88 beats_per_minute, uint8_t lowest = 0, uint8_t highest = 255,
+                  uint32_t timebase = 0, uint8_t phase_offset = 0)
+{
+  uint8_t beat = beat8( beats_per_minute, timebase);
+  uint8_t beatsaw = beat + phase_offset;
+  uint8_t rangewidth = highest - lowest;
+  uint8_t scaledbeat = scale8( beatsaw, rangewidth);
+  uint8_t result = lowest + scaledbeat;
+  return result;
+}
+
 void strandTest()
 {
   static uint8_t i = 0;
@@ -990,6 +1027,78 @@ void strandTest()
 void showSolidColor()
 {
   fill_solid(leds, NUM_LEDS, solidColor);
+}
+
+void chaseRainbow() {
+  static uint8_t h = 0;
+
+  for (uint16_t i = NUM_LEDS - 1; i > 0; i--) {
+    leds[i] = leds[i - 1];
+  }
+  leds[0] = ColorFromPalette(RainbowStripeColors_p, h++);
+}
+
+void chaseRainbow2() {
+  const uint8_t step = 255 / NUM_LEDS;
+
+  for ( int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = ColorFromPalette(RainbowStripeColors_p, hueFast + i * step);
+  }
+}
+
+void chaseRainbow3()
+{
+  fadeToBlackBy(leds, NUM_LEDS, 20);
+  CHSV color = CHSV(gHue, 220, 255);
+  int pos = beatsaw8(120, 0, NUM_LEDS - 1);
+  static int prevpos = 0;
+  if ( pos < prevpos ) {
+    fill_solid(leds + prevpos, NUM_LEDS - prevpos, color);
+    fill_solid(0, pos + 1, color);
+  } else {
+    fill_solid(leds + prevpos, (pos - prevpos) + 1, color);
+  }
+  prevpos = pos;
+}
+
+void chasePalette() {
+  for (uint16_t i = NUM_LEDS - 1; i > 0; i--) {
+    leds[i] = leds[i - 1];
+  }
+  leds[0] = ColorFromPalette(gCurrentPalette, gHue);
+}
+
+void chasePalette2() {
+  const uint8_t step = 255 / NUM_LEDS;
+
+  for ( int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = ColorFromPalette(gCurrentPalette, hueFast + i * step);
+  }
+}
+
+void chasePalette3()
+{
+  fadeToBlackBy(leds, NUM_LEDS, 20);
+  CRGB color = ColorFromPalette(gCurrentPalette, gHue);
+  int pos = beatsaw8(120, 0, NUM_LEDS - 1);
+  static int prevpos = 0;
+  if ( pos < prevpos ) {
+    fill_solid(leds + prevpos, NUM_LEDS - prevpos, color);
+    fill_solid(0, pos + 1, color);
+  } else {
+    fill_solid(leds + prevpos, (pos - prevpos) + 1, color);
+  }
+  prevpos = pos;
+}
+
+void solidRainbow()
+{
+  fill_solid(leds, NUM_LEDS, CHSV(gHue, 255, 255));
+}
+
+void solidPalette()
+{
+  fill_solid(leds, NUM_LEDS, ColorFromPalette(gCurrentPalette, gHue));
 }
 
 // Patterns from FastLED example DemoReel100: https://github.com/FastLED/FastLED/blob/master/examples/DemoReel100/DemoReel100.ino
@@ -1046,7 +1155,47 @@ void bpm()
   }
 }
 
-void juggle()
+void juggle() {
+  const uint8_t dotCount = 3;
+  const uint8_t step = 192 / dotCount;
+  static uint8_t previousPositions[dotCount];
+  
+//  for (int i = 0; i < dotCount; i++) {
+//    previousPositions[i] = 0;
+//  }
+  
+  // colored dots, weaving in and out of sync with each other
+  fadeToBlackBy( leds, NUM_LEDS, 20);
+  byte dothue = 0;
+  for (int i = 0; i < dotCount; i++) {
+    CRGB color = CHSV(dothue, 255, 255);
+    if (dotCount == 3) {
+      if (i == 1) {
+        color = CRGB::Green;
+      }
+      else if (i == 2) {
+        color = CRGB::Blue;
+      }
+    }
+    uint8_t position = beatsin16(i + 15, 0, NUM_LEDS - 1);
+    uint8_t previousPosition = previousPositions[i];
+    if (position < previousPosition) {
+      for (uint8_t j = position; j <= previousPosition; j++) {
+        leds[j] |= CHSV(dothue, 200, 255);
+      }
+//      fill_solid(leds + position, (previousPosition - position) + 1, color);
+    } else {
+      for (uint8_t j = previousPosition; j <= position; j++) {
+        leds[j] |= color; // CHSV(dothue, 200, 255);
+      }
+//      fill_solid(leds + previousPosition, (position - previousPosition) + 1, color);
+    }
+    dothue += step;
+    previousPositions[i] = position;
+  }
+}
+
+void juggle2()
 {
   static uint8_t    numdots =   4; // Number of dots in use.
   static uint8_t   faderate =   2; // How long should the trails be. Very low value = longer trails.
@@ -1215,17 +1364,6 @@ void addGlitter( uint8_t chanceOfGlitter)
 // are at the bottom of this file.
 extern const TProgmemRGBGradientPalettePtr gGradientPalettes[];
 extern const uint8_t gGradientPaletteCount;
-
-uint8_t beatsaw8( accum88 beats_per_minute, uint8_t lowest = 0, uint8_t highest = 255,
-                  uint32_t timebase = 0, uint8_t phase_offset = 0)
-{
-  uint8_t beat = beat8( beats_per_minute, timebase);
-  uint8_t beatsaw = beat + phase_offset;
-  uint8_t rangewidth = highest - lowest;
-  uint8_t scaledbeat = scale8( beatsaw, rangewidth);
-  uint8_t result = lowest + scaledbeat;
-  return result;
-}
 
 void colorWaves()
 {
