@@ -92,7 +92,7 @@ CRGB leds[NUM_LEDS];
 
 const uint8_t brightnessCount = 5;
 uint8_t brightnessMap[brightnessCount] = { 16, 32, 64, 128, 255 };
-uint8_t brightnessIndex = 0;
+uint8_t brightnessIndex = 2;
 
 // ten seconds per color palette makes a good demo
 // 20-120 is better for deployment
@@ -260,7 +260,7 @@ void setup() {
   FastLED.show();
 
   EEPROM.begin(512);
-//  loadSettings();
+//  loadSettings();  // TODO: enable this once we've worked out the brightness issue
 
   FastLED.setBrightness(brightness);
 
