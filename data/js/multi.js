@@ -11,6 +11,8 @@ var postValueTimer = {};
 
 var ignoreColorChange = false;
 
+let controllers = {};
+
 // var ws = new ReconnectingWebSocket('ws://' + address + ':81/', ['arduino']);
 // ws.debug = true;
 
@@ -26,41 +28,94 @@ var ignoreColorChange = false;
 $(document).ready(function() {
   $("#status").html("Connecting, please wait...");
 
-  $.get(urlBase + "all", function(data) {
-    $("#status").html("Loading, please wait...");
-
-    $.each(data, function(index, field) {
-      if (field.type == "Number") {
-        addNumberField(field);
-      } else if (field.type == "Boolean") {
-        addBooleanField(field);
-      } else if (field.type == "Select") {
-        addSelectField(field);
-      } else if (field.type == "Color") {
-        addColorFieldPalette(field);
-        addColorFieldPicker(field);
-      } else if (field.type == "Section") {
-        addSectionField(field);
-      } else if (field.type == "String") {
-        addStringField(field, false);
-      } else if (field.type == "Label") {
-        addStringField(field, true);
-      }
-    });
-
-    $(".minicolors").minicolors({
-      theme: "bootstrap",
-      changeDelay: 200,
-      control: "wheel",
-      format: "rgb",
-      inline: true
-    });
-
-    $("#status").html("Ready");
-  }).fail(function(errorThrown) {
-    console.log("error: " + errorThrown);
-  });
+  $("#btnDiscover").click(discover);
 });
+
+function discover() {
+  $("#controllersDiv").empty();
+
+  let subnet = $("#inputSubnet").val();
+  let start = parseInt($("#inputStartAddress").val());
+  let end = parseInt($("#inputEndAddress").val());
+
+  let builtForm = false;
+
+  for (let i = start; i <= end; i++) {
+    let address = subnet + "." + i;
+    console.log(`Connecting to ${address}, please wait...`);
+    $("#status").html(`Connecting to ${address}, please wait...`);
+
+    let url = `http://${address}/`;
+
+    $.get(url + "all", function(data) {
+      console.log(`found controller at ${address}`);
+
+      controllers[address] = {
+        address: "address",
+        checked: true
+      };
+
+      $.each(data, function(index, field) {
+        if (field.name == "name") {
+          let name = field.value;
+          if (name.startsWith("Race Gate")) {
+            name = name.substring(9);
+          }
+          console.log(`found controller ${name} at ${address}`);
+          let controllerButton = $("#controllerButtonTemplate").clone();
+          controllerButton.attr("data-address", address);
+          var label = controllerButton.find(".controllerLabel");
+          var checkbox = controllerButton.find(".badgebox");
+          checkbox.attr("data-address", address);
+          checkbox.change(controllerCheckboxChange);
+          label.text(name + " - " + address);
+          $("#controllersDiv").append(controllerButton);
+        }
+      });
+
+      if (!builtForm) {
+        builtForm = true;
+        $("#form").empty();
+        $.each(data, function(index, field) {
+          if (field.name == "name") {
+          } else if (field.type == "Number") {
+            addNumberField(field);
+          } else if (field.type == "Boolean") {
+            addBooleanField(field);
+          } else if (field.type == "Select") {
+            addSelectField(field);
+          } else if (field.type == "Color") {
+            addColorFieldPalette(field);
+            addColorFieldPicker(field);
+          } else if (field.type == "Section") {
+            addSectionField(field);
+          } else if (field.type == "String") {
+            addStringField(field, false);
+          } else if (field.type == "Label") {
+            addStringField(field, true);
+          }
+        });
+
+        $(".minicolors").minicolors({
+          theme: "bootstrap",
+          changeDelay: 200,
+          control: "wheel",
+          format: "rgb",
+          inline: true
+        });
+      }
+    }).fail(function(errorThrown) {
+      console.log("error: " + JSON.stringify(errorThrown));
+    });
+  }
+}
+
+function controllerCheckboxChange() {
+  let address = $(this).attr("data-address");
+  let controller = controllers[address];
+  controller.checked = this.checked;
+  console.log(`controller ${address} checked: ${this.checked}`);
+}
 
 function addNumberField(field) {
   var template = $("#numberTemplate").clone();
@@ -435,13 +490,32 @@ function postValue(name, value) {
 
   var body = { name: name, value: value };
 
-  $.post(urlBase + name + "?value=" + value, body, function(data) {
-    if (data.name != null) {
-      $("#status").html("Set " + name + ": " + data.name);
-    } else {
-      $("#status").html("Set " + name + ": " + data);
+  for (let address in controllers) {
+    try {
+      let controller = controllers[address];
+      let checked = controller.checked;
+
+      let url = `http://${address}/`;
+
+      if (!checked) {
+        continue;
+      }
+
+      url = url + name + "?value=" + value;
+
+      console.log(url);
+
+      $.post(url, body, function(data) {
+        if (data.name != null) {
+          $("#status").html("Set " + name + ": " + data.name);
+        } else {
+          $("#status").html("Set " + name + ": " + data);
+        }
+      });
+    } catch (error) {
+      log.error(JSON.stringify(error));
     }
-  });
+  }
 }
 
 function delayPostValue(name, value) {

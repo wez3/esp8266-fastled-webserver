@@ -36,9 +36,9 @@
       </div>
       <div class="collapse navbar-collapse" id="navbar-collapse-1">
         <ul class="nav navbar-nav">
-          <li class="active"><a href="/">Race Gate <span class="sr-only">(current)</span></a></li>
+          <li><a href="/">Race Gate</a></li>
           <li><a href="/simple.htm" target="_blank" title="Simple Mode">Simple</a></li>
-          <li><a href="/multi.htm" title="Simple Mode">Multi</a></li>
+          <li class="active"><a href="/multi.htm" title="Simple Mode">Multi</a></li>
           <li><a href="/edit.htm" target="_blank" title="Edit Files">Files</a></li>
           <li><a href="/update" target="_blank" title="Update Firmware">Firmware</a></li>
           <!-- <li><a href="/wifi.htm" target="_blank" title="Wi-Fi Settings">Wi-Fi</a></li> -->
@@ -56,12 +56,52 @@
 
   <div id="container" class="container">
 
+    <form class="form-horizontal">
+      <div id="addressesGroup" class="form-group">
+        <label class="col-sm-2 control-label">Addresses</label>
+        <div class="col-sm-4">
+            <div class="input-group">
+              <span class="input-group-addon">Subnet</span>
+              <input type="text" class="form-control" id="inputSubnet" value="192.168.0">
+            </div>
+        </div>
+        <div class="col-sm-3">
+          <div class="input-group">
+            <span class="input-group-addon">Start</span>
+            <input type="number" min="0" max="255" class="form-control" id="inputStartAddress" value="101">
+          </div>
+        </div>
+        <div class="col-sm-3">
+            <div class="input-group">
+              <span class="input-group-addon">End</span>
+              <input type="number" min="0" max="255" class="form-control" id="inputEndAddress" value="110">
+            </div>
+        </div>
+      </div>
+      <div id="controllersGroup" class="form-group">
+        <label class="col-sm-2 control-label">Controllers</label>
+        <div class="col-sm-10">
+          <button type="button" class="btn btn-default" id="btnDiscover">Discover</button>
+          <button type="button" class="btn btn-default" id="btnSelectAllControllers">Select All</button>
+          <button type="button" class="btn btn-default" id="btnDeselectAllControllers">Select None</button>
+          <div class="checkbox" id="controllersDiv">
+          </div>
+        </div>
+      </div>
+    </form>
+
     <form class="form-horizontal" id="form">
     </form>
 
   </div>
 
   <div id="templates" style="display: none">
+
+    <label id="controllerButtonTemplate" class="btn btn-default">
+      <input type="checkbox" class="badgebox" checked>
+      <span class="badge">&check;</span>
+      <span class="controllerLabel"></span>
+    </label>
 
     <div id="sectionTemplate" class="form-group">
       <div class="col-sm-12">
@@ -242,7 +282,7 @@
   <script src="js/minicolors.min.js"></script>
   <!-- <script src="js/r-websocket.min.js"></script> -->
 
-  <script src="js/app.js"></script>
+  <script src="js/multi.js"></script>
 
 </body>
 

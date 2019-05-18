@@ -75,6 +75,8 @@ const uint8_t coordsHeat[NUM_LEDS] = { 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 2
 
 #define MAX_DIMENSION ((MATRIX_WIDTH > MATRIX_HEIGHT) ? MATRIX_WIDTH : MATRIX_HEIGHT)
 
+String nameString;
+
 const bool apMode = false;
 
 #include "Secrets.h" // this file is intentionally not included in the sketch, so nobody accidentally commits their secret information.
@@ -260,7 +262,7 @@ void setup() {
   FastLED.show();
 
   EEPROM.begin(512);
-//  loadSettings();  // TODO: enable this once we've worked out the brightness issue
+  loadSettings();
 
   FastLED.setBrightness(brightness);
 
@@ -293,28 +295,31 @@ void setup() {
   //disabled due to https://github.com/jasoncoon/esp8266-fastled-webserver/issues/62
   //initializeWiFi();
 
+  // Do a little work to get a unique-ish name. Get the
+  // last two bytes of the MAC (HEX'd)":
+  uint8_t mac[WL_MAC_ADDR_LENGTH];
+  WiFi.softAPmacAddress(mac);
+  String macID = String(mac[WL_MAC_ADDR_LENGTH - 2], HEX) +
+                 String(mac[WL_MAC_ADDR_LENGTH - 1], HEX);
+  macID.toUpperCase();
+
+  nameString = "Race Gate " + macID;
+
+  char nameChar[nameString.length() + 1];
+  memset(nameChar, 0, nameString.length() + 1);
+
+  for (int i = 0; i < nameString.length(); i++)
+    nameChar[i] = nameString.charAt(i);
+
+  Serial.printf("Name: %s\n", nameChar );
+
   if (apMode)
   {
     WiFi.mode(WIFI_AP);
 
-    // Do a little work to get a unique-ish name. Append the
-    // last two bytes of the MAC (HEX'd) to "Thing-":
-    uint8_t mac[WL_MAC_ADDR_LENGTH];
-    WiFi.softAPmacAddress(mac);
-    String macID = String(mac[WL_MAC_ADDR_LENGTH - 2], HEX) +
-                   String(mac[WL_MAC_ADDR_LENGTH - 1], HEX);
-    macID.toUpperCase();
-    String AP_NameString = "ESP8266 Thing " + macID;
+    WiFi.softAP(nameChar, WiFiAPPSK);
 
-    char AP_NameChar[AP_NameString.length() + 1];
-    memset(AP_NameChar, 0, AP_NameString.length() + 1);
-
-    for (int i = 0; i < AP_NameString.length(); i++)
-      AP_NameChar[i] = AP_NameString.charAt(i);
-
-    WiFi.softAP(AP_NameChar, WiFiAPPSK);
-
-    Serial.printf("Connect to Wi-Fi access point: %s\n", AP_NameChar);
+    Serial.printf("Connect to Wi-Fi access point: %s\n", nameChar);
     Serial.println("and open http://192.168.4.1 in your browser");
   }
   else
@@ -330,12 +335,18 @@ void setup() {
 
   webServer.on("/all", HTTP_GET, []() {
     String json = getFieldsJson(fields, fieldCount);
+    webServer.sendHeader("Access-Control-Allow-Origin", "*");
+    webServer.sendHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+    webServer.sendHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     webServer.send(200, "text/json", json);
   });
 
   webServer.on("/fieldValue", HTTP_GET, []() {
     String name = webServer.arg("name");
     String value = getFieldValue(name, fields, fieldCount);
+    webServer.sendHeader("Access-Control-Allow-Origin", "*");
+    webServer.sendHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+    webServer.sendHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     webServer.send(200, "text/json", value);
   });
 
@@ -343,6 +354,9 @@ void setup() {
     String name = webServer.arg("name");
     String value = webServer.arg("value");
     String newValue = setFieldValue(name, value, fields, fieldCount);
+    webServer.sendHeader("Access-Control-Allow-Origin", "*");
+    webServer.sendHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+    webServer.sendHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     webServer.send(200, "text/json", newValue);
   });
 
@@ -476,6 +490,9 @@ void sendInt(uint8_t value)
 
 void sendString(String value)
 {
+  webServer.sendHeader("Access-Control-Allow-Origin", "*");
+  webServer.sendHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  webServer.sendHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   webServer.send(200, "text/plain", value);
 }
 
@@ -520,6 +537,8 @@ void loop() {
       Serial.print(WiFi.localIP());
       Serial.println(" in your browser");
     }
+    
+    Serial.println(".");
   }
 
   // EVERY_N_SECONDS(10) {

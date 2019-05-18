@@ -12,6 +12,12 @@ var postValueTimer = {};
 var ignoreColorChange = false;
 
 var patterns = [
+  "Fire",
+  "Juggle",
+
+  "Chase Rainbow",
+  "Chase Rainbow 2",
+
   "Pride",
   "Color Waves",
 
@@ -41,37 +47,36 @@ var patterns = [
   "Confetti",
   "Sinelon",
   "Beat",
-  "Juggle",
-  "Fire",
+  "Juggle 2",
   "Water"
 ];
 
-var ws = new ReconnectingWebSocket('ws://' + address + ':81/', ['arduino']);
-ws.debug = true;
+// var ws = new ReconnectingWebSocket('ws://' + address + ':81/', ['arduino']);
+// ws.debug = true;
 
-ws.onmessage = function(evt) {
-  if(evt.data != null)
-  {
-    var data = JSON.parse(evt.data);
-    if(data == null) return;
-    switch(data.name) {
-      case "power":
-        if(data.value == 1) {
-          $("#btnOn").attr("class", "btn btn-primary");
-          $("#btnOff").attr("class", "btn btn-default");
-        } else {
-          $("#btnOff").attr("class", "btn btn-primary");
-          $("#btnOn").attr("class", "btn btn-default");
-        }
-        break;
+// ws.onmessage = function(evt) {
+//   if(evt.data != null)
+//   {
+//     var data = JSON.parse(evt.data);
+//     if(data == null) return;
+//     switch(data.name) {
+//       case "power":
+//         if(data.value == 1) {
+//           $("#btnOn").attr("class", "btn btn-primary");
+//           $("#btnOff").attr("class", "btn btn-default");
+//         } else {
+//           $("#btnOff").attr("class", "btn btn-primary");
+//           $("#btnOn").attr("class", "btn btn-default");
+//         }
+//         break;
 
-      case "pattern":
-        $(".grid-item-pattern").attr("class", "grid-item-pattern btn btn-default");
-        $("#pattern-button-" + data.value).attr("class", "grid-item-pattern btn btn-primary");
-        break;
-    }
-  }
-}
+//       case "pattern":
+//         $(".grid-item-pattern").attr("class", "grid-item-pattern btn btn-default");
+//         $("#pattern-button-" + data.value).attr("class", "grid-item-pattern btn btn-primary");
+//         break;
+//     }
+//   }
+// }
 
 $(document).ready(function() {
   $("#status").html("Connecting, please wait...");
@@ -82,7 +87,7 @@ $(document).ready(function() {
     $.each(data, function(index, field) {
       switch (field.name) {
         case "power":
-          if(field.value == 1) {
+          if (field.value == 1) {
             $("#btnOn").attr("class", "btn btn-primary");
           } else {
             $("#btnOff").attr("class", "btn btn-primary");
@@ -120,28 +125,27 @@ function addColorButtons() {
   var levels = 10;
   var levelStep = 60 / levels;
 
-  for(var l = 20; l < 80; l += levelStep) {
-    for(var h = 0; h < hues; h++) {
+  for (var l = 20; l < 80; l += levelStep) {
+    for (var h = 0; h < hues; h++) {
       addColorButton(h * hueStep, 100, l);
     }
   }
 
-  $('.grid-color').isotope({
-    itemSelector: '.grid-item-color',
-    layoutMode: 'fitRows'
+  $(".grid-color").isotope({
+    itemSelector: ".grid-item-color",
+    layoutMode: "fitRows"
   });
-
 }
 
 var colorButtonIndex = 0;
 
 function addColorButton(h, s, l) {
-  var color = "hsla(" + h + ", " + s + "%, " + l + "%, 1)"
+  var color = "hsla(" + h + ", " + s + "%, " + l + "%, 1)";
   var template = $("#colorButtonTemplate").clone();
   template.attr("id", "color-button-" + colorButtonIndex++);
   template.css("background-color", color);
   template.click(function() {
-    var rgb = $(this).css('backgroundColor');
+    var rgb = $(this).css("backgroundColor");
     var components = rgbToComponents(rgb);
 
     $(".grid-item-color").css("border", "none");
@@ -155,8 +159,7 @@ function addColorButton(h, s, l) {
 
 function addPatternButtons(patternField) {
   $.each(patternField.options, function(index, pattern) {
-    if($.inArray(pattern, patterns) == -1)
-      return;
+    if ($.inArray(pattern, patterns) == -1) return;
 
     var template = $("#patternButtonTemplate").clone();
     template.attr("id", "pattern-button-" + index);
@@ -164,19 +167,25 @@ function addPatternButtons(patternField) {
     template.click(function() {
       postValue("patternName", pattern);
       $(".grid-item-color").css("border", "none");
-      $(".grid-item-pattern").attr("class", "grid-item-pattern btn btn-default");
+      $(".grid-item-pattern").attr(
+        "class",
+        "grid-item-pattern btn btn-default"
+      );
       $(this).attr("class", "grid-item-pattern btn btn-primary");
     });
 
     $("#patternGrid").append(template);
   });
 
-  $('.grid-pattern').isotope({
-    itemSelector: '.grid-item-pattern',
-    layoutMode: 'fitRows'
+  $(".grid-pattern").isotope({
+    itemSelector: ".grid-item-pattern",
+    layoutMode: "fitRows"
   });
 
-  $("#pattern-button-" + patternField.value).attr("class", "grid-item-pattern btn btn-primary");
+  $("#pattern-button-" + patternField.value).attr(
+    "class",
+    "grid-item-pattern btn btn-primary"
+  );
 }
 
 function postValue(name, value) {
@@ -201,14 +210,29 @@ function delayPostValue(name, value) {
 }
 
 function postColor(name, value) {
-  $("#status").html("Setting " + name + ": " + value.r + "," + value.g + "," + value.b + ", please wait...");
+  $("#status").html(
+    "Setting " +
+      name +
+      ": " +
+      value.r +
+      "," +
+      value.g +
+      "," +
+      value.b +
+      ", please wait..."
+  );
 
   var body = { name: name, r: value.r, g: value.g, b: value.b };
 
-  $.post(urlBase + name + "?r=" + value.r + "&g=" + value.g + "&b=" + value.b, body, function(data) {
-    $("#status").html("Set " + name + ": " + data);
-  })
-  .fail(function(textStatus, errorThrown) { $("#status").html("Fail: " + textStatus + " " + errorThrown); });
+  $.post(
+    urlBase + name + "?r=" + value.r + "&g=" + value.g + "&b=" + value.b,
+    body,
+    function(data) {
+      $("#status").html("Set " + name + ": " + data);
+    }
+  ).fail(function(textStatus, errorThrown) {
+    $("#status").html("Fail: " + textStatus + " " + errorThrown);
+  });
 }
 
 function delayPostColor(name, value) {
