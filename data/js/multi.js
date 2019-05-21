@@ -26,86 +26,125 @@ let controllers = {};
 // }
 
 $(document).ready(function() {
-  $("#status").html("Connecting, please wait...");
+  let subnet = window.location.hostname;
+
+  let n = subnet.lastIndexOf(".");
+
+  subnet = subnet.substr(0, n);
+
+  $("#inputSubnet").val(subnet);
 
   $("#btnDiscover").click(discover);
+
+  $("#btnSelectAllControllers").click(selectAllControllers);
+  $("#btnDeselectAllControllers").click(deselectAllControllers);
 });
+
+function selectAllControllers() {
+  setAllChecked(true);
+}
+
+function deselectAllControllers() {
+  setAllChecked(false);
+}
+
+function setAllChecked(value) {
+  $(".controller-checkbox").prop("checked", value);
+
+  for (let address in controllers) {
+    let controller = controllers[address];
+    controller.checked = value;
+  }
+}
 
 function discover() {
   $("#controllersDiv").empty();
 
   let subnet = $("#inputSubnet").val();
+
+  if (!subnet.endsWith(".")) {
+    subnet += ".";
+  }
+
   let start = parseInt($("#inputStartAddress").val());
   let end = parseInt($("#inputEndAddress").val());
 
   let builtForm = false;
 
   for (let i = start; i <= end; i++) {
-    let address = subnet + "." + i;
+    let address = subnet + i;
     console.log(`Connecting to ${address}, please wait...`);
     $("#status").html(`Connecting to ${address}, please wait...`);
 
     let url = `http://${address}/`;
 
-    $.get(url + "all", function(data) {
-      console.log(`found controller at ${address}`);
+    $.ajax({
+      url: url + "all",
+      success: function(data) {
+        let name = "Unknown";
 
-      controllers[address] = {
-        address: "address",
-        checked: true
-      };
-
-      $.each(data, function(index, field) {
-        if (field.name == "name") {
-          let name = field.value;
-          if (name.startsWith("Race Gate")) {
-            name = name.substring(9);
-          }
-          console.log(`found controller ${name} at ${address}`);
-          let controllerButton = $("#controllerButtonTemplate").clone();
-          controllerButton.attr("data-address", address);
-          var label = controllerButton.find(".controllerLabel");
-          var checkbox = controllerButton.find(".badgebox");
-          checkbox.attr("data-address", address);
-          checkbox.change(controllerCheckboxChange);
-          label.text(name + " - " + address);
-          $("#controllersDiv").append(controllerButton);
-        }
-      });
-
-      if (!builtForm) {
-        builtForm = true;
-        $("#form").empty();
         $.each(data, function(index, field) {
           if (field.name == "name") {
-          } else if (field.type == "Number") {
-            addNumberField(field);
-          } else if (field.type == "Boolean") {
-            addBooleanField(field);
-          } else if (field.type == "Select") {
-            addSelectField(field);
-          } else if (field.type == "Color") {
-            addColorFieldPalette(field);
-            addColorFieldPicker(field);
-          } else if (field.type == "Section") {
-            addSectionField(field);
-          } else if (field.type == "String") {
-            addStringField(field, false);
-          } else if (field.type == "Label") {
-            addStringField(field, true);
+            name = field.value;
+            if (name.startsWith("Race Gate")) {
+              name = name.substring(9);
+            }
           }
         });
 
-        $(".minicolors").minicolors({
-          theme: "bootstrap",
-          changeDelay: 200,
-          control: "wheel",
-          format: "rgb",
-          inline: true
-        });
-      }
+        $("#status").html(`Found controller ${name} at ${address}.`);
+        console.log(`found controller ${name} at ${address}`);
+        let controllerButton = $("#controllerButtonTemplate").clone();
+        controllerButton.attr("id", "conroller-" + name);
+        controllerButton.attr("data-address", address);
+        var label = controllerButton.find(".controllerLabel");
+        var checkbox = controllerButton.find(".controller-checkbox");
+        checkbox.attr("data-address", address);
+        checkbox.change(controllerCheckboxChange);
+        label.text(name + " - " + address);
+        $("#controllersDiv").append(controllerButton);
+
+        controllers[address] = {
+          address: "address",
+          checked: true
+        };
+
+        if (!builtForm) {
+          builtForm = true;
+          $("#form").empty();
+          $.each(data, function(index, field) {
+            if (field.name == "name") {
+            } else if (field.type == "Number") {
+              addNumberField(field);
+            } else if (field.type == "Boolean") {
+              addBooleanField(field);
+            } else if (field.type == "Select") {
+              addSelectField(field);
+            } else if (field.type == "Color") {
+              addColorFieldPalette(field);
+              addColorFieldPicker(field);
+            } else if (field.type == "Section") {
+              addSectionField(field);
+            } else if (field.type == "String") {
+              addStringField(field, false);
+            } else if (field.type == "Label") {
+              addStringField(field, true);
+            }
+          });
+
+          $(".minicolors").minicolors({
+            theme: "bootstrap",
+            changeDelay: 200,
+            control: "wheel",
+            format: "rgb",
+            inline: true
+          });
+        }
+      },
+      timeout: 2000
     }).fail(function(errorThrown) {
-      console.log("error: " + JSON.stringify(errorThrown));
+      // console.log("error: " + JSON.stringify(errorThrown));
+      $("#status").html(``);
     });
   }
 }
@@ -486,8 +525,6 @@ function setBooleanFieldValue(field, btnOn, btnOff, value) {
 }
 
 function postValue(name, value) {
-  $("#status").html("Setting " + name + ": " + value + ", please wait...");
-
   var body = { name: name, value: value };
 
   for (let address in controllers) {
@@ -504,6 +541,8 @@ function postValue(name, value) {
       url = url + name + "?value=" + value;
 
       console.log(url);
+
+      $("#status").html("Setting " + name + ": " + value + ", please wait...");
 
       $.post(url, body, function(data) {
         if (data.name != null) {
@@ -526,29 +565,38 @@ function delayPostValue(name, value) {
 }
 
 function postColor(name, value) {
-  $("#status").html(
-    "Setting " +
-      name +
-      ": " +
-      value.r +
-      "," +
-      value.g +
-      "," +
-      value.b +
-      ", please wait..."
-  );
-
   var body = { name: name, r: value.r, g: value.g, b: value.b };
 
-  $.post(
-    urlBase + name + "?r=" + value.r + "&g=" + value.g + "&b=" + value.b,
-    body,
-    function(data) {
-      $("#status").html("Set " + name + ": " + data);
+  for (let address in controllers) {
+    try {
+      let controller = controllers[address];
+      let checked = controller.checked;
+
+      let url = `http://${address}`;
+
+      if (!checked) {
+        continue;
+      }
+
+      url = `${url}/${name}?r=${value.r}&g=${value.g}&b=${value.b}`;
+
+      console.log(url);
+
+      $("#status").html(
+        `Setting ${name}: ${value.r},${value.g},${value.b}, please wait...`
+      );
+
+      $.post(url, body, function(data) {
+        if (data.name != null) {
+          $("#status").html("Set " + name + ": " + data.name);
+        } else {
+          $("#status").html("Set " + name + ": " + data);
+        }
+      });
+    } catch (error) {
+      log.error(JSON.stringify(error));
     }
-  ).fail(function(textStatus, errorThrown) {
-    $("#status").html("Fail: " + textStatus + " " + errorThrown);
-  });
+  }
 }
 
 function delayPostColor(name, value) {

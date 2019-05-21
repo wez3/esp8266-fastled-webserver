@@ -68,13 +68,13 @@
         <div class="col-sm-3">
           <div class="input-group">
             <span class="input-group-addon">Start</span>
-            <input type="number" min="0" max="255" class="form-control" id="inputStartAddress" value="101">
+            <input type="number" min="1" max="254" class="form-control" id="inputStartAddress" value="1">
           </div>
         </div>
         <div class="col-sm-3">
             <div class="input-group">
               <span class="input-group-addon">End</span>
-              <input type="number" min="0" max="255" class="form-control" id="inputEndAddress" value="110">
+              <input type="number" min="1" max="254" class="form-control" id="inputEndAddress" value="254">
             </div>
         </div>
       </div>
@@ -98,7 +98,7 @@
   <div id="templates" style="display: none">
 
     <label id="controllerButtonTemplate" class="btn btn-default">
-      <input type="checkbox" class="badgebox" checked>
+      <input type="checkbox" class="badgebox controller-checkbox" checked>
       <span class="badge">&check;</span>
       <span class="controllerLabel"></span>
     </label>
