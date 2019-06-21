@@ -20,44 +20,51 @@
 //#define INTERRUPT_THRESHOLD 1
 #define FASTLED_INTERRUPT_RETRY_COUNT 0
 
-#include <FastLED.h>
+#include <FastLED.h>  // https://github.com/FastLED/FastLED
 FASTLED_USING_NAMESPACE
 
 extern "C" {
 #include "user_interface.h"
 }
 
+#include <Button.h>   // https://github.com/madleech/Button
 #include <ESP8266WiFi.h>
 //#include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPUpdateServer.h>
-//#include <WebSocketsServer.h>
+#include <WebSocketsServer.h>  // https://github.com/Links2004/arduinoWebSockets
 #include <FS.h>
 #include <EEPROM.h>
-//#include <IRremoteESP8266.h>
 #include "GradientPalettes.h"
 
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 #include "Field.h"
 
-//#define RECV_PIN D4
-//IRrecv irReceiver(RECV_PIN);
-
-//#include "Commands.h"
-
 ESP8266WebServer webServer(80);
-//WebSocketsServer webSocketsServer = WebSocketsServer(81);
+WebSocketsServer webSocketsServer = WebSocketsServer(81);
 ESP8266HTTPUpdateServer httpUpdateServer;
 
 #include "FSBrowser.h"
 
+const uint8_t PIN_BUTTON_PATTERN = D3;
+const uint8_t PIN_BUTTON_BRIGHTNESS = D4;
+
+Button buttonBrightness(PIN_BUTTON_BRIGHTNESS);
+Button buttonPattern(PIN_BUTTON_PATTERN);
+
 #define DATA_PIN      D5
 #define LED_TYPE      WS2811
 #define COLOR_ORDER   RGB
-#define NUM_LEDS      200
 
-#define MILLI_AMPS         2000 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
+#define NUM_STRIPS 6
+#define NUM_LEDS_PER_STRIP 50
+#define NUM_LEDS NUM_LEDS_PER_STRIP * NUM_STRIPS
+
+CRGB leds[NUM_STRIPS * NUM_LEDS_PER_STRIP];
+
+
+#define MILLI_AMPS         1500 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
 #define FRAMES_PER_SECOND  120  // here you can control the speed. With the Access Point / Web Server the animations run a bit slower.
 
 const bool apMode = false;
@@ -72,8 +79,6 @@ const bool apMode = false;
 // char* ssid = "your-ssid";
 // char* password = "your-password";
 
-
-CRGB leds[NUM_LEDS];
 
 const uint8_t brightnessCount = 5;
 uint8_t brightnessMap[brightnessCount] = { 16, 32, 64, 128, 255 };
@@ -222,8 +227,16 @@ void setup() {
   delay(100);
   Serial.setDebugOutput(true);
 
-  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);         // for WS2812 (Neopixel)
-  //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS); // for APA102 (Dotstar)
+  buttonBrightness.begin();
+  buttonPattern.begin();
+
+  FastLED.addLeds<NEOPIXEL, D1>(leds, 0 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP);
+  FastLED.addLeds<NEOPIXEL, D2>(leds, 1 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP);
+  FastLED.addLeds<NEOPIXEL, D5>(leds, 2 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP);
+  FastLED.addLeds<NEOPIXEL, D6>(leds, 3 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP);
+  FastLED.addLeds<NEOPIXEL, D7>(leds, 4 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP);
+  FastLED.addLeds<NEOPIXEL, D8>(leds, 5 * NUM_LEDS_PER_STRIP, NUM_LEDS_PER_STRIP);
+  
   FastLED.setDither(false);
   FastLED.setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(brightness);
@@ -434,9 +447,9 @@ void setup() {
   webServer.begin();
   Serial.println("HTTP web server started");
 
-  //  webSocketsServer.begin();
-  //  webSocketsServer.onEvent(webSocketEvent);
-  //  Serial.println("Web socket server started");
+    webSocketsServer.begin();
+    webSocketsServer.onEvent(webSocketEvent);
+    Serial.println("Web socket server started");
 
   autoPlayTimeout = millis() + (autoplayDuration * 1000);
 }
@@ -454,13 +467,24 @@ void sendString(String value)
 void broadcastInt(String name, uint8_t value)
 {
   String json = "{\"name\":\"" + name + "\",\"value\":" + String(value) + "}";
-  //  webSocketsServer.broadcastTXT(json);
+    webSocketsServer.broadcastTXT(json);
 }
 
 void broadcastString(String name, String value)
 {
   String json = "{\"name\":\"" + name + "\",\"value\":\"" + String(value) + "\"}";
-  //  webSocketsServer.broadcastTXT(json);
+    webSocketsServer.broadcastTXT(json);
+}
+
+void handleButtonInput() {
+  if (buttonPattern.released())
+  {
+    adjustPattern(true);
+  }
+
+  if (buttonBrightness.released()) {
+    adjustBrightness(true);
+  }
 }
 
 void loop() {
@@ -468,10 +492,11 @@ void loop() {
   random16_add_entropy(random(65535));
 
   //  dnsServer.processNextRequest();
-  //  webSocketsServer.loop();
+    webSocketsServer.loop();
   webServer.handleClient();
 
   //  handleIrInput();
+  handleButtonInput();
 
   if (power == 0) {
     fill_solid(leds, NUM_LEDS, CRGB::Black);
@@ -524,249 +549,42 @@ void loop() {
   FastLED.delay(1000 / FRAMES_PER_SECOND);
 }
 
-//void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-//
-//  switch (type) {
-//    case WStype_DISCONNECTED:
-//      Serial.printf("[%u] Disconnected!\n", num);
-//      break;
-//
-//    case WStype_CONNECTED:
-//      {
-//        IPAddress ip = webSocketsServer.remoteIP(num);
-//        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
-//
-//        // send message to client
-//        // webSocketsServer.sendTXT(num, "Connected");
-//      }
-//      break;
-//
-//    case WStype_TEXT:
-//      Serial.printf("[%u] get Text: %s\n", num, payload);
-//
-//      // send message to client
-//      // webSocketsServer.sendTXT(num, "message here");
-//
-//      // send data to all connected clients
-//      // webSocketsServer.broadcastTXT("message here");
-//      break;
-//
-//    case WStype_BIN:
-//      Serial.printf("[%u] get binary length: %u\n", num, length);
-//      hexdump(payload, length);
-//
-//      // send message to client
-//      // webSocketsServer.sendBIN(num, payload, lenght);
-//      break;
-//  }
-//}
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
 
-//void handleIrInput()
-//{
-//  InputCommand command = readCommand();
-//
-//  if (command != InputCommand::None) {
-//    Serial.print("command: ");
-//    Serial.println((int) command);
-//  }
-//
-//  switch (command) {
-//    case InputCommand::Up: {
-//        adjustPattern(true);
-//        break;
-//      }
-//    case InputCommand::Down: {
-//        adjustPattern(false);
-//        break;
-//      }
-//    case InputCommand::Power: {
-//        setPower(power == 0 ? 1 : 0);
-//        break;
-//      }
-//    case InputCommand::BrightnessUp: {
-//        adjustBrightness(true);
-//        break;
-//      }
-//    case InputCommand::BrightnessDown: {
-//        adjustBrightness(false);
-//        break;
-//      }
-//    case InputCommand::PlayMode: { // toggle pause/play
-//        setAutoplay(!autoplay);
-//        break;
-//      }
-//
-//    // pattern buttons
-//
-//    case InputCommand::Pattern1: {
-//        setPattern(0);
-//        break;
-//      }
-//    case InputCommand::Pattern2: {
-//        setPattern(1);
-//        break;
-//      }
-//    case InputCommand::Pattern3: {
-//        setPattern(2);
-//        break;
-//      }
-//    case InputCommand::Pattern4: {
-//        setPattern(3);
-//        break;
-//      }
-//    case InputCommand::Pattern5: {
-//        setPattern(4);
-//        break;
-//      }
-//    case InputCommand::Pattern6: {
-//        setPattern(5);
-//        break;
-//      }
-//    case InputCommand::Pattern7: {
-//        setPattern(6);
-//        break;
-//      }
-//    case InputCommand::Pattern8: {
-//        setPattern(7);
-//        break;
-//      }
-//    case InputCommand::Pattern9: {
-//        setPattern(8);
-//        break;
-//      }
-//    case InputCommand::Pattern10: {
-//        setPattern(9);
-//        break;
-//      }
-//    case InputCommand::Pattern11: {
-//        setPattern(10);
-//        break;
-//      }
-//    case InputCommand::Pattern12: {
-//        setPattern(11);
-//        break;
-//      }
-//
-//    // custom color adjustment buttons
-//
-//    case InputCommand::RedUp: {
-//        solidColor.red += 8;
-//        setSolidColor(solidColor);
-//        break;
-//      }
-//    case InputCommand::RedDown: {
-//        solidColor.red -= 8;
-//        setSolidColor(solidColor);
-//        break;
-//      }
-//    case InputCommand::GreenUp: {
-//        solidColor.green += 8;
-//        setSolidColor(solidColor);
-//        break;
-//      }
-//    case InputCommand::GreenDown: {
-//        solidColor.green -= 8;
-//        setSolidColor(solidColor);
-//        break;
-//      }
-//    case InputCommand::BlueUp: {
-//        solidColor.blue += 8;
-//        setSolidColor(solidColor);
-//        break;
-//      }
-//    case InputCommand::BlueDown: {
-//        solidColor.blue -= 8;
-//        setSolidColor(solidColor);
-//        break;
-//      }
-//
-//    // color buttons
-//
-//    case InputCommand::Red: {
-//        setSolidColor(CRGB::Red);
-//        break;
-//      }
-//    case InputCommand::RedOrange: {
-//        setSolidColor(CRGB::OrangeRed);
-//        break;
-//      }
-//    case InputCommand::Orange: {
-//        setSolidColor(CRGB::Orange);
-//        break;
-//      }
-//    case InputCommand::YellowOrange: {
-//        setSolidColor(CRGB::Goldenrod);
-//        break;
-//      }
-//    case InputCommand::Yellow: {
-//        setSolidColor(CRGB::Yellow);
-//        break;
-//      }
-//
-//    case InputCommand::Green: {
-//        setSolidColor(CRGB::Green);
-//        break;
-//      }
-//    case InputCommand::Lime: {
-//        setSolidColor(CRGB::Lime);
-//        break;
-//      }
-//    case InputCommand::Aqua: {
-//        setSolidColor(CRGB::Aqua);
-//        break;
-//      }
-//    case InputCommand::Teal: {
-//        setSolidColor(CRGB::Teal);
-//        break;
-//      }
-//    case InputCommand::Navy: {
-//        setSolidColor(CRGB::Navy);
-//        break;
-//      }
-//
-//    case InputCommand::Blue: {
-//        setSolidColor(CRGB::Blue);
-//        break;
-//      }
-//    case InputCommand::RoyalBlue: {
-//        setSolidColor(CRGB::RoyalBlue);
-//        break;
-//      }
-//    case InputCommand::Purple: {
-//        setSolidColor(CRGB::Purple);
-//        break;
-//      }
-//    case InputCommand::Indigo: {
-//        setSolidColor(CRGB::Indigo);
-//        break;
-//      }
-//    case InputCommand::Magenta: {
-//        setSolidColor(CRGB::Magenta);
-//        break;
-//      }
-//
-//    case InputCommand::White: {
-//        setSolidColor(CRGB::White);
-//        break;
-//      }
-//    case InputCommand::Pink: {
-//        setSolidColor(CRGB::Pink);
-//        break;
-//      }
-//    case InputCommand::LightPink: {
-//        setSolidColor(CRGB::LightPink);
-//        break;
-//      }
-//    case InputCommand::BabyBlue: {
-//        setSolidColor(CRGB::CornflowerBlue);
-//        break;
-//      }
-//    case InputCommand::LightBlue: {
-//        setSolidColor(CRGB::LightBlue);
-//        break;
-//      }
-//  }
-//}
+  switch (type) {
+    case WStype_DISCONNECTED:
+      Serial.printf("[%u] Disconnected!\n", num);
+      break;
+
+    case WStype_CONNECTED:
+      {
+        IPAddress ip = webSocketsServer.remoteIP(num);
+        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+
+        // send message to client
+        // webSocketsServer.sendTXT(num, "Connected");
+      }
+      break;
+
+    case WStype_TEXT:
+      Serial.printf("[%u] get Text: %s\n", num, payload);
+
+      // send message to client
+      // webSocketsServer.sendTXT(num, "message here");
+
+      // send data to all connected clients
+      // webSocketsServer.broadcastTXT("message here");
+      break;
+
+    case WStype_BIN:
+      Serial.printf("[%u] get binary length: %u\n", num, length);
+      hexdump(payload, length);
+
+      // send message to client
+      // webSocketsServer.sendBIN(num, payload, lenght);
+      break;
+  }
+}
 
 void loadSettings()
 {
@@ -925,11 +743,17 @@ void setPaletteName(String name)
 
 void adjustBrightness(bool up)
 {
-  if (up && brightnessIndex < brightnessCount - 1)
+  if (up)
     brightnessIndex++;
-  else if (!up && brightnessIndex > 0)
+  else
     brightnessIndex--;
 
+  // wrap around at the ends
+  if (brightnessIndex < 0)
+    brightnessIndex = brightnessCount - 1;
+  if (brightnessIndex >= brightnessCount)
+    brightnessIndex = 0;
+    
   brightness = brightnessMap[brightnessIndex];
 
   FastLED.setBrightness(brightness);
