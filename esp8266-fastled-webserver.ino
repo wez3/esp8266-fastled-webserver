@@ -27,6 +27,7 @@ extern "C" {
 #include "user_interface.h"
 }
 
+#include <Wire.h>
 #include <ESP8266WiFi.h>
 //#include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
@@ -481,6 +482,8 @@ void setup() {
   //  Serial.println("Web socket server started");
 
   autoPlayTimeout = millis() + (autoplayDuration * 1000);
+
+  Wire.begin();
 }
 
 void sendInt(uint8_t value)
