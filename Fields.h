@@ -109,6 +109,46 @@ String getName() {
   return nameString;
 }
 
+String getRssi() {
+  return String(state.rssi);
+}
+
+String getRssiRaw() {
+  return String(state.rssiRaw);
+}
+
+String getRssiPeak() {
+  return String(state.rssiPeak);
+}
+
+String getRssiPeakRaw() {
+  return String(state.rssiPeakRaw);
+}
+
+String getRssiTrigger() {
+  return String(state.rssiTrigger);
+}
+
+String getLap() {
+  return String(lastPass.lap);
+}
+
+String getLapRssiPeak() {
+  return String(lastPass.rssiPeak);
+}
+
+String getLapRSSIPeakRaw() {
+  return String(lastPass.rssiPeakRaw);
+}
+
+String getLapTimeStamp() {
+  return String(lastPass.timeStamp);
+}
+
+String getCalibrationMode() {
+  return String(state.calibrationMode);
+}
+
 FieldList fields = {
   { "name", "Name", LabelFieldType, 0, 0, getName },
   { "power", "Power", BooleanFieldType, 0, 1, getPower },
@@ -116,6 +156,21 @@ FieldList fields = {
   { "pattern", "Pattern", SelectFieldType, 0, patternCount, getPattern, getPatterns },
   { "palette", "Palette", SelectFieldType, 0, paletteCount, getPalette, getPalettes },
   { "speed", "Speed", NumberFieldType, 1, 255, getSpeed },
+  
+  { "race", "Race", SectionFieldType },
+  { "frequency", "Frequency", SelectFieldType, 0, frequencyCount, getFrequency, getFrequencies},
+  { "calibrationMode", "Calibrate", BooleanFieldType, 0, 1, getCalibrationMode },
+  { "rssi", "RSSI", LabelFieldType, 0, 1024, getRssi },
+  { "rssiRaw", "RSSI Raw", LabelFieldType, 0, 1024, getRssiRaw },
+  { "rssiPeak", "RSSI Peak", LabelFieldType, 0, 1024, getRssiPeak },
+  { "rssiPeakRaw", "RSSI Peak Raw", LabelFieldType, 0, 1024, getRssiPeakRaw },
+  { "rssiTrigger", "RSSI Trigger", LabelFieldType, 0, 1024, getRssiTrigger },
+  
+  { "lap", "Lap", LabelFieldType, 0, 255, getLap },
+  { "lapRssiPeak", "Lap RSSI Peak", LabelFieldType, 0, 255, getLapRssiPeak },
+  { "lapRSSIPeakRaw", "Lap RSSI Peak Raw", LabelFieldType, 0, 255, getLapRSSIPeakRaw },
+  { "lapTimeStamp", "Lap Time Stamp", LabelFieldType, 0, 255, getLapTimeStamp },
+  
   { "autoplay", "Autoplay", SectionFieldType },
   { "autoplay", "Autoplay", BooleanFieldType, 0, 1, getAutoplay },
   { "autoplayDuration", "Autoplay Duration", NumberFieldType, 0, 255, getAutoplayDuration },

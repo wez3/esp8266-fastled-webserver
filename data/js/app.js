@@ -11,17 +11,17 @@ var postValueTimer = {};
 
 var ignoreColorChange = false;
 
-// var ws = new ReconnectingWebSocket('ws://' + address + ':81/', ['arduino']);
-// ws.debug = true;
+var ws = new ReconnectingWebSocket('ws://' + address + ':81/', ['arduino']);
+ws.debug = true;
 
-// ws.onmessage = function(evt) {
-//   if(evt.data != null)
-//   {
-//     var data = JSON.parse(evt.data);
-//     if(data == null) return;
-//     updateFieldValue(data.name, data.value);
-//   }
-// }
+ws.onmessage = function(evt) {
+  if(evt.data != null)
+  {
+    var data = JSON.parse(evt.data);
+    if(data == null) return;
+    updateFieldValue(data.name, data.value);
+  }
+}
 
 $(document).ready(function() {
   $("#status").html("Connecting, please wait...");
@@ -403,7 +403,7 @@ function updateFieldValue(name, value) {
 
   var type = group.attr("data-field-type");
 
-  if (type == "Number") {
+  if (type == "Number" || type == "Label") {
     var input = group.find(".form-control");
     input.val(value);
   } else if (type == "Boolean") {

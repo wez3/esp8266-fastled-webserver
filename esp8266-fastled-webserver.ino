@@ -27,12 +27,12 @@ extern "C" {
 #include "user_interface.h"
 }
 
-#include <Wire.h>
+//#include <Wire.h>
 #include <ESP8266WiFi.h>
 //#include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPUpdateServer.h>
-//#include <WebSocketsServer.h>
+#include <WebSocketsServer.h>
 #include <FS.h>
 #include <EEPROM.h>
 //#include <IRremoteESP8266.h>
@@ -48,12 +48,12 @@ extern "C" {
 //#include "Commands.h"
 
 ESP8266WebServer webServer(80);
-//WebSocketsServer webSocketsServer = WebSocketsServer(81);
+WebSocketsServer webSocketsServer = WebSocketsServer(81);
 ESP8266HTTPUpdateServer httpUpdateServer;
 
 #include "FSBrowser.h"
 
-#define DATA_PIN      D5
+#define DATA_PIN      D1
 #define LED_TYPE      WS2812B
 #define COLOR_ORDER   GRB
 #define NUM_LEDS      120
@@ -162,22 +162,24 @@ typedef PatternAndName PatternAndNameList[];
 // List of patterns to cycle through.  Each is defined as a separate function below.
 
 PatternAndNameList patterns = {
+  { rssiGauge,                   "RSSI Gauge" },
+
   { fire,                   "Fire" },
   { juggle,                 "Juggle" },
-  
+
   { chaseRainbow,           "Chase Rainbow" },
   { chaseRainbow2,          "Chase Rainbow 2" },
-  
+
   { pride,                  "Pride" },
   { colorWaves,             "Color Waves" },
 
-//  { chaseRainbow3,          "Chase Rainbow 3" },
+  //  { chaseRainbow3,          "Chase Rainbow 3" },
   { chasePalette,           "Chase Palette" },
   { chasePalette2,          "Chase Palette 2" },
-//  { chasePalette3,          "Chase Palette 3" },
+  //  { chasePalette3,          "Chase Palette 3" },
   { solidPalette,           "Solid Palette" },
   { solidRainbow,           "Solid Rainbow" },
-  
+
   // twinkle patterns
   { rainbowTwinkles,        "Rainbow Twinkles" },
   { snowTwinkles,           "Snow Twinkles" },
@@ -244,6 +246,7 @@ const String paletteNames[paletteCount] = {
   "Heat",
 };
 
+#include "RX5808.h"
 #include "Fields.h"
 
 void setup() {
@@ -456,6 +459,18 @@ void setup() {
     sendInt(autoplayDuration);
   });
 
+  webServer.on("/frequency", HTTP_POST, []() {
+    String value = webServer.arg("value");
+    setFrequencyIndex(value.toInt());
+    sendInt(currentFrequencyIndex);
+  });
+
+  webServer.on("/calibrationMode", HTTP_POST, []() {
+    String value = webServer.arg("value");
+    setCalibrationMode(value.toInt());
+    sendInt(state.calibrationMode);
+  });
+
   //list directory
   webServer.on("/list", HTTP_GET, handleFileList);
   //load editor
@@ -477,13 +492,14 @@ void setup() {
   webServer.begin();
   Serial.println("HTTP web server started");
 
-  //  webSocketsServer.begin();
-  //  webSocketsServer.onEvent(webSocketEvent);
-  //  Serial.println("Web socket server started");
+  webSocketsServer.begin();
+  webSocketsServer.onEvent(webSocketEvent);
+  Serial.println("Web socket server started");
 
   autoPlayTimeout = millis() + (autoplayDuration * 1000);
 
-  Wire.begin();
+  //  Wire.begin();
+  setupRx5808();
 }
 
 void sendInt(uint8_t value)
@@ -499,16 +515,16 @@ void sendString(String value)
   webServer.send(200, "text/plain", value);
 }
 
-void broadcastInt(String name, uint8_t value)
+void broadcastInt(String name, uint16_t value)
 {
   String json = "{\"name\":\"" + name + "\",\"value\":" + String(value) + "}";
-  //  webSocketsServer.broadcastTXT(json);
+  webSocketsServer.broadcastTXT(json);
 }
 
 void broadcastString(String name, String value)
 {
   String json = "{\"name\":\"" + name + "\",\"value\":\"" + String(value) + "\"}";
-  //  webSocketsServer.broadcastTXT(json);
+  webSocketsServer.broadcastTXT(json);
 }
 
 void loop() {
@@ -516,7 +532,7 @@ void loop() {
   random16_add_entropy(random(65535));
 
   //  dnsServer.processNextRequest();
-  //  webSocketsServer.loop();
+  webSocketsServer.loop();
   webServer.handleClient();
 
   //  handleIrInput();
@@ -540,8 +556,8 @@ void loop() {
       Serial.print(WiFi.localIP());
       Serial.println(" in your browser");
     }
-    
-    Serial.println(".");
+
+    //    Serial.println(".");
   }
 
   // EVERY_N_SECONDS(10) {
@@ -572,48 +588,67 @@ void loop() {
   // Call the current pattern function once, updating the 'leds' array
   patterns[currentPatternIndex].pattern();
 
+  EVERY_N_MILLIS(50) {
+    rxLoop();
+  }
+  
+  static uint8_t lapCount = 0;
+  static unsigned long lapFlashTimeout = 0;
+
+  unsigned long now = millis();
+
+  if (lastPass.lap > lapCount) {
+    lapCount = lastPass.lap;
+
+    lapFlashTimeout = now + 2000;
+  }
+
+  if (lapFlashTimeout > now) {
+    fill_solid(leds, NUM_LEDS, CHSV(96, 255, beatsin8(240)));
+  }
+  
   FastLED.show();
 
   // insert a delay to keep the framerate modest
   FastLED.delay(1000 / FRAMES_PER_SECOND);
 }
 
-//void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-//
-//  switch (type) {
-//    case WStype_DISCONNECTED:
-//      Serial.printf("[%u] Disconnected!\n", num);
-//      break;
-//
-//    case WStype_CONNECTED:
-//      {
-//        IPAddress ip = webSocketsServer.remoteIP(num);
-//        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
-//
-//        // send message to client
-//        // webSocketsServer.sendTXT(num, "Connected");
-//      }
-//      break;
-//
-//    case WStype_TEXT:
-//      Serial.printf("[%u] get Text: %s\n", num, payload);
-//
-//      // send message to client
-//      // webSocketsServer.sendTXT(num, "message here");
-//
-//      // send data to all connected clients
-//      // webSocketsServer.broadcastTXT("message here");
-//      break;
-//
-//    case WStype_BIN:
-//      Serial.printf("[%u] get binary length: %u\n", num, length);
-//      hexdump(payload, length);
-//
-//      // send message to client
-//      // webSocketsServer.sendBIN(num, payload, lenght);
-//      break;
-//  }
-//}
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+  switch (type) {
+    case WStype_DISCONNECTED:
+      //      Serial.printf("[%u] Disconnected!\n", num);
+      break;
+
+    case WStype_CONNECTED:
+      {
+        IPAddress ip = webSocketsServer.remoteIP(num);
+        //        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+
+        // send message to client
+        // webSocketsServer.sendTXT(num, "Connected");
+      }
+      break;
+
+    case WStype_TEXT:
+      //      Serial.printf("[%u] get Text: %s\n", num, payload);
+
+      // send message to client
+      // webSocketsServer.sendTXT(num, "message here");
+
+      // send data to all connected clients
+      // webSocketsServer.broadcastTXT("message here");
+      break;
+
+    case WStype_BIN:
+      //      Serial.printf("[%u] get binary length: %u\n", num, length);
+      hexdump(payload, length);
+
+      // send message to client
+      // webSocketsServer.sendBIN(num, payload, lenght);
+      break;
+  }
+}
 
 //void handleIrInput()
 //{
@@ -1030,6 +1065,14 @@ uint8_t beatsaw8( accum88 beats_per_minute, uint8_t lowest = 0, uint8_t highest 
   return result;
 }
 
+void rssiGauge() {
+  uint16_t rssiMin = _min(300, state.rssi);
+
+  uint8_t scaled = map(state.rssi, rssiMin, state.rssiMax, 0, 255);
+
+  fill_solid(leds, NUM_LEDS, CHSV(scaled, 255, 255));
+}
+
 void strandTest()
 {
   static uint8_t i = 0;
@@ -1181,11 +1224,11 @@ void juggle() {
   const uint8_t dotCount = 3;
   const uint8_t step = 192 / dotCount;
   static uint8_t previousPositions[dotCount];
-  
-//  for (int i = 0; i < dotCount; i++) {
-//    previousPositions[i] = 0;
-//  }
-  
+
+  //  for (int i = 0; i < dotCount; i++) {
+  //    previousPositions[i] = 0;
+  //  }
+
   // colored dots, weaving in and out of sync with each other
   fadeToBlackBy( leds, NUM_LEDS, 20);
   byte dothue = 0;
@@ -1205,12 +1248,12 @@ void juggle() {
       for (uint8_t j = position; j <= previousPosition; j++) {
         leds[j] |= CHSV(dothue, 200, 255);
       }
-//      fill_solid(leds + position, (previousPosition - position) + 1, color);
+      //      fill_solid(leds + position, (previousPosition - position) + 1, color);
     } else {
       for (uint8_t j = previousPosition; j <= position; j++) {
         leds[j] |= color; // CHSV(dothue, 200, 255);
       }
-//      fill_solid(leds + previousPosition, (position - previousPosition) + 1, color);
+      //      fill_solid(leds + previousPosition, (position - previousPosition) + 1, color);
     }
     dothue += step;
     previousPositions[i] = position;
