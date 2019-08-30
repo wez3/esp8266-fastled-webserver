@@ -109,45 +109,61 @@ String getName() {
   return nameString;
 }
 
-String getRssi() {
-  return String(state.rssi);
+// String getRssi() {
+//   return String(state.rssi);
+// }
+
+// String getRssiRaw() {
+//   return String(state.rssiRaw);
+// }
+
+// String getRssiPeak() {
+//   return String(state.rssiPeak);
+// }
+
+// String getRssiPeakRaw() {
+//   return String(state.rssiPeakRaw);
+// }
+
+// String getRssiTrigger() {
+//   return String(state.rssiTrigger);
+// }
+
+// String getLap() {
+//   return String(lastPass.lap);
+// }
+
+// String getLapRssiPeak() {
+//   return String(lastPass.rssiPeak);
+// }
+
+// String getLapRSSIPeakRaw() {
+//   return String(lastPass.rssiPeakRaw);
+// }
+
+// String getLapTimeStamp() {
+//   return String(lastPass.timeStamp);
+// }
+
+String getDistance() {
+  return String(distance);
 }
 
-String getRssiRaw() {
-  return String(state.rssiRaw);
+String getMaxDistance() {
+  return String(maxDistance);
 }
 
-String getRssiPeak() {
-  return String(state.rssiPeak);
-}
-
-String getRssiPeakRaw() {
-  return String(state.rssiPeakRaw);
-}
-
-String getRssiTrigger() {
-  return String(state.rssiTrigger);
-}
-
-String getLap() {
-  return String(lastPass.lap);
-}
-
-String getLapRssiPeak() {
-  return String(lastPass.rssiPeak);
-}
-
-String getLapRSSIPeakRaw() {
-  return String(lastPass.rssiPeakRaw);
-}
-
-String getLapTimeStamp() {
-  return String(lastPass.timeStamp);
+String getScaledDistance() {
+  return String(scaledDistance);
 }
 
 String getCalibrationMode() {
-  return String(state.calibrationMode);
+  return String(calibrationMode);
 }
+
+// String getCalibrationMode() {
+//   return String(state.calibrationMode);
+// }
 
 FieldList fields = {
   { "name", "Name", LabelFieldType, 0, 0, getName },
@@ -158,18 +174,21 @@ FieldList fields = {
   { "speed", "Speed", NumberFieldType, 1, 255, getSpeed },
   
   { "race", "Race", SectionFieldType },
-  { "frequency", "Frequency", SelectFieldType, 0, frequencyCount, getFrequency, getFrequencies},
+  // { "frequency", "Frequency", SelectFieldType, 0, frequencyCount, getFrequency, getFrequencies},
   { "calibrationMode", "Calibrate", BooleanFieldType, 0, 1, getCalibrationMode },
-  { "rssi", "RSSI", LabelFieldType, 0, 1024, getRssi },
-  { "rssiRaw", "RSSI Raw", LabelFieldType, 0, 1024, getRssiRaw },
-  { "rssiPeak", "RSSI Peak", LabelFieldType, 0, 1024, getRssiPeak },
-  { "rssiPeakRaw", "RSSI Peak Raw", LabelFieldType, 0, 1024, getRssiPeakRaw },
-  { "rssiTrigger", "RSSI Trigger", LabelFieldType, 0, 1024, getRssiTrigger },
+  { "distance", "Distance", LabelFieldType, 0, 450, getDistance },
+  { "maxDistance", "Max", NumberFieldType, 0, 450, getMaxDistance },
+  { "scaledDistance", "Scaled", LabelFieldType, 0, 450, getScaledDistance },
+  // { "rssi", "RSSI", LabelFieldType, 0, 1024, getRssi },
+  // { "rssiRaw", "RSSI Raw", LabelFieldType, 0, 1024, getRssiRaw },
+  // { "rssiPeak", "RSSI Peak", LabelFieldType, 0, 1024, getRssiPeak },
+  // { "rssiPeakRaw", "RSSI Peak Raw", LabelFieldType, 0, 1024, getRssiPeakRaw },
+  // { "rssiTrigger", "RSSI Trigger", LabelFieldType, 0, 1024, getRssiTrigger },
   
-  { "lap", "Lap", LabelFieldType, 0, 255, getLap },
-  { "lapRssiPeak", "Lap RSSI Peak", LabelFieldType, 0, 255, getLapRssiPeak },
-  { "lapRSSIPeakRaw", "Lap RSSI Peak Raw", LabelFieldType, 0, 255, getLapRSSIPeakRaw },
-  { "lapTimeStamp", "Lap Time Stamp", LabelFieldType, 0, 255, getLapTimeStamp },
+  // { "lap", "Lap", LabelFieldType, 0, 255, getLap },
+  // { "lapRssiPeak", "Lap RSSI Peak", LabelFieldType, 0, 255, getLapRssiPeak },
+  // { "lapRSSIPeakRaw", "Lap RSSI Peak Raw", LabelFieldType, 0, 255, getLapRSSIPeakRaw },
+  // { "lapTimeStamp", "Lap Time Stamp", LabelFieldType, 0, 255, getLapTimeStamp },
   
   { "autoplay", "Autoplay", SectionFieldType },
   { "autoplay", "Autoplay", BooleanFieldType, 0, 1, getAutoplay },

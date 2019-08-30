@@ -53,8 +53,8 @@ ESP8266HTTPUpdateServer httpUpdateServer;
 
 #include "FSBrowser.h"
 
-#define DATA_PIN      D1
-#define LED_TYPE      WS2812B
+#define DATA_PIN      D5
+#define LED_TYPE      WS2811
 #define COLOR_ORDER   GRB
 #define NUM_LEDS      120
 
@@ -162,7 +162,7 @@ typedef PatternAndName PatternAndNameList[];
 // List of patterns to cycle through.  Each is defined as a separate function below.
 
 PatternAndNameList patterns = {
-  { rssiGauge,                   "RSSI Gauge" },
+  // { rssiGauge,                   "RSSI Gauge" },
 
   { fire,                   "Fire" },
   { juggle,                 "Juggle" },
@@ -246,7 +246,8 @@ const String paletteNames[paletteCount] = {
   "Heat",
 };
 
-#include "RX5808.h"
+// #include "RX5808.h"
+#include "hcsr05.h"
 #include "Fields.h"
 
 void setup() {
@@ -459,16 +460,28 @@ void setup() {
     sendInt(autoplayDuration);
   });
 
-  webServer.on("/frequency", HTTP_POST, []() {
+  // webServer.on("/frequency", HTTP_POST, []() {
+  //   String value = webServer.arg("value");
+  //   setFrequencyIndex(value.toInt());
+  //   sendInt(currentFrequencyIndex);
+  // });
+
+  // webServer.on("/calibrationMode", HTTP_POST, []() {
+  //   String value = webServer.arg("value");
+  //   setCalibrationMode(value.toInt());
+  //   sendInt(state.calibrationMode);
+  // });
+
+  webServer.on("/maxDistance", HTTP_POST, []() {
     String value = webServer.arg("value");
-    setFrequencyIndex(value.toInt());
-    sendInt(currentFrequencyIndex);
+    maxDistance = value.toInt();
+    sendInt(maxDistance);
   });
 
   webServer.on("/calibrationMode", HTTP_POST, []() {
     String value = webServer.arg("value");
-    setCalibrationMode(value.toInt());
-    sendInt(state.calibrationMode);
+    calibrationMode = value.toInt();
+    sendInt(calibrationMode);
   });
 
   //list directory
@@ -499,7 +512,8 @@ void setup() {
   autoPlayTimeout = millis() + (autoplayDuration * 1000);
 
   //  Wire.begin();
-  setupRx5808();
+  // setupRx5808();
+  setupHcsr05();
 }
 
 void sendInt(uint8_t value)
@@ -588,24 +602,39 @@ void loop() {
   // Call the current pattern function once, updating the 'leds' array
   patterns[currentPatternIndex].pattern();
 
-  EVERY_N_MILLIS(50) {
-    rxLoop();
+  // EVERY_N_MILLIS(50) {
+    // rxLoop();
+  // }
+
+  readDistance();
+
+  EVERY_N_SECONDS(1) {
+    broadcastInt("distance", distance);
+    broadcastInt("scaledDistance", scaledDistance);
+
+    if (calibrationMode != 0) {
+        if (distance < maxDistance) {
+            maxDistance = distance;
+        }
+
+        broadcastInt("maxDistance", maxDistance);
+    }
   }
   
-  static uint8_t lapCount = 0;
-  static unsigned long lapFlashTimeout = 0;
+  // static uint8_t lapCount = 0;
+  // static unsigned long lapFlashTimeout = 0;
 
-  unsigned long now = millis();
+  // unsigned long now = millis();
 
-  if (lastPass.lap > lapCount) {
-    lapCount = lastPass.lap;
+  // if (lastPass.lap > lapCount) {
+  //   lapCount = lastPass.lap;
 
-    lapFlashTimeout = now + 2000;
-  }
+  //   lapFlashTimeout = now + 2000;
+  // }
 
-  if (lapFlashTimeout > now) {
-    fill_solid(leds, NUM_LEDS, CHSV(96, 255, beatsin8(240)));
-  }
+  // if (lapFlashTimeout > now) {
+  //   fill_solid(leds, NUM_LEDS, CHSV(96, 255, beatsin8(240)));
+  // }
   
   FastLED.show();
 
@@ -1065,13 +1094,13 @@ uint8_t beatsaw8( accum88 beats_per_minute, uint8_t lowest = 0, uint8_t highest 
   return result;
 }
 
-void rssiGauge() {
-  uint16_t rssiMin = _min(300, state.rssi);
+// void rssiGauge() {
+//   uint16_t rssiMin = _min(300, state.rssi);
 
-  uint8_t scaled = map(state.rssi, rssiMin, state.rssiMax, 0, 255);
+//   uint8_t scaled = map(state.rssi, rssiMin, state.rssiMax, 0, 255);
 
-  fill_solid(leds, NUM_LEDS, CHSV(scaled, 255, 255));
-}
+//   fill_solid(leds, NUM_LEDS, CHSV(scaled, 255, 255));
+// }
 
 void strandTest()
 {

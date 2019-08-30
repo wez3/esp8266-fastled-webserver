@@ -2,3 +2,4 @@
 Secrets.h
 build/
 buildcache/
+.vscode/
