@@ -1,5 +1,5 @@
 /*
- * ESP8266 + FastLED + IR Remote + MSGEQ7: https://github.com/jasoncoon/esp8266-fastled-webserver
+ * ESP8266 FastLED WebServer: https://github.com/jasoncoon/esp8266-fastled-webserver
  * Copyright (C) 2015 Jason Coon
  *
  * This program is free software: you can redistribute it and/or modify

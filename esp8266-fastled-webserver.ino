@@ -52,13 +52,18 @@ ESP8266HTTPUpdateServer httpUpdateServer;
 
 #include "FSBrowser.h"
 
-#define DATA_PIN      D5
-#define LED_TYPE      WS2811
-#define COLOR_ORDER   RGB
-#define NUM_LEDS      200
+#define DATA_PIN      MOSI
+#define CLK_PIN       SCK
+#define LED_TYPE      APA102
+#define COLOR_ORDER   BGR
+#define MatrixWidth   24
+#define MatrixHeight  8
+#define NUM_LEDS      MatrixWidth * MatrixHeight
 
 #define MILLI_AMPS         2000 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
-#define FRAMES_PER_SECOND  120  // here you can control the speed. With the Access Point / Web Server the animations run a bit slower.
+#define FRAMES_PER_SECOND  60  // here you can control the speed. With the Access Point / Web Server the animations run a bit slower.
+
+#include "XYMatrix.h"
 
 const bool apMode = false;
 
@@ -139,6 +144,7 @@ typedef PatternAndName PatternAndNameList[];
 
 #include "Twinkles.h"
 #include "TwinkleFOX.h"
+#include "Noise.h"
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
 
@@ -167,6 +173,30 @@ PatternAndNameList patterns = {
   { fireTwinkles,           "Fire Twinkles" },
   { cloud2Twinkles,         "Cloud 2 Twinkles" },
   { oceanTwinkles,          "Ocean Twinkles" },
+
+  { strandTest,             "Strand Test" },
+  { xyMatrixTest,           "Matrix Test" },
+
+  { verticalPalette,           "Vertical Palette" },
+  { diagonalPalette,           "Diagonal Palette" },
+  { horizontalPalette,         "Horizontal Palette" },
+
+  { verticalGradientPalette,   "Vertical Gradient Palette" },
+  { diagonalGradientPalette,   "Diagonal Gradient Palette" },
+  { horizontalGradientPalette, "Horizontal Gradient Palette" },
+
+  // noise patterns
+  { fireNoise, "Fire Noise" },
+  { fireNoise2, "Fire Noise 2" },
+  { lavaNoise, "Lava Noise" },
+  { rainbowNoise, "Rainbow Noise" },
+  { rainbowStripeNoise, "Rainbow Stripe Noise" },
+  { partyNoise, "Party Noise" },
+  { forestNoise, "Forest Noise" },
+  { cloudNoise, "Cloud Noise" },
+  { oceanNoise, "Ocean Noise" },
+  { blackAndWhiteNoise, "Black & White Noise" },
+  { blackAndBlueNoise, "Black & Blue Noise" },
 
   { rainbow,                "Rainbow" },
   { rainbowWithGlitter,     "Rainbow With Glitter" },
@@ -222,8 +252,8 @@ void setup() {
   delay(100);
   Serial.setDebugOutput(true);
 
-  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);         // for WS2812 (Neopixel)
-  //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS); // for APA102 (Dotstar)
+  //  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);         // for WS2812 (Neopixel)
+  FastLED.addLeds<LED_TYPE, DATA_PIN, CLK_PIN, COLOR_ORDER, DATA_RATE_MHZ(1)>(leds, NUM_LEDS); // for APA102 (Dotstar)
   FastLED.setDither(false);
   FastLED.setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(brightness);
@@ -521,7 +551,7 @@ void loop() {
   FastLED.show();
 
   // insert a delay to keep the framerate modest
-  FastLED.delay(1000 / FRAMES_PER_SECOND);
+  delay(1000 / FRAMES_PER_SECOND);
 }
 
 //void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
@@ -958,9 +988,9 @@ void setBrightness(uint8_t value)
 
 void strandTest()
 {
-  static uint8_t i = 0;
+  static uint16_t i = 0;
 
-  EVERY_N_SECONDS(1)
+  EVERY_N_MILLIS(30)
   {
     i++;
     if (i >= NUM_LEDS)
@@ -1265,4 +1295,95 @@ void palettetest( CRGB* ledarray, uint16_t numleds, const CRGBPalette16& gCurren
   static uint8_t startindex = 0;
   startindex--;
   fill_palette( ledarray, numleds, startindex, (256 / NUM_LEDS) + 1, gCurrentPalette, 255, LINEARBLEND);
+}
+
+void xyMatrixTest()
+{
+  FastLED.clear();
+
+  static uint8_t x = 0;
+  static uint8_t y = 0;
+
+  leds[XY(x, y)] = CHSV(gHue, 255, 255);
+
+  EVERY_N_MILLIS(30) {
+    x++;
+    if (x >= MatrixWidth) {
+      x = 0;
+      y++;
+      if (y >= MatrixHeight) {
+        y = 0;
+      }
+    }
+  }
+}
+
+void verticalPalette() {
+  uint8_t verticalHues = 256 / MatrixHeight;
+
+  for (uint8_t y = 0; y < MatrixHeight; y++) {
+    CRGB color = ColorFromPalette(palettes[currentPaletteIndex], beat8(speed) + (y * verticalHues));
+
+    for (uint8_t x = 0; x < MatrixWidth; x++) {
+      leds[XY(x, y)] = color;
+    }
+  }
+}
+
+void diagonalPalette() {
+  uint8_t verticalHues = 256 / MatrixHeight;
+
+  for (uint8_t y = 0; y < MatrixHeight; y++) {
+    for (uint8_t x = 0; x < MatrixWidth; x++) {
+      CRGB color = ColorFromPalette(palettes[currentPaletteIndex], beat8(speed) - ((x - y) * verticalHues));
+      leds[XY(x, y)] = color;
+    }
+  }
+}
+
+void horizontalPalette() {
+  uint8_t horizontalHues = 256 / MatrixWidth;
+
+  for (uint8_t x = 0; x < MatrixWidth; x++) {
+    CRGB color = ColorFromPalette(palettes[currentPaletteIndex], beat8(speed) - (x * horizontalHues));
+
+    for (uint8_t y = 0; y < MatrixHeight; y++) {
+      leds[XY(x, y)] = color;
+    }
+  }
+}
+
+void verticalGradientPalette() {
+  uint8_t verticalHues = 256 / MatrixHeight;
+
+  for (uint8_t y = 0; y < MatrixHeight; y++) {
+    CRGB color = ColorFromPalette(gCurrentPalette, beat8(speed) + (y * verticalHues));
+
+    for (uint8_t x = 0; x < MatrixWidth; x++) {
+      leds[XY(x, y)] = color;
+    }
+  }
+}
+
+void diagonalGradientPalette() {
+  uint8_t verticalHues = 256 / MatrixHeight;
+
+  for (uint8_t y = 0; y < MatrixHeight; y++) {
+    for (uint8_t x = 0; x < MatrixWidth; x++) {
+      CRGB color = ColorFromPalette(gCurrentPalette, beat8(speed) - ((x - y) * verticalHues));
+      leds[XY(x, y)] = color;
+    }
+  }
+}
+
+void horizontalGradientPalette() {
+  uint8_t horizontalHues = 256 / MatrixWidth;
+
+  for (uint8_t x = 0; x < MatrixWidth; x++) {
+    CRGB color = ColorFromPalette(gCurrentPalette, beat8(speed) - (x * horizontalHues));
+
+    for (uint8_t y = 0; y < MatrixHeight; y++) {
+      leds[XY(x, y)] = color;
+    }
+  }
 }
