@@ -52,12 +52,16 @@ ESP8266HTTPUpdateServer httpUpdateServer;
 
 #include "FSBrowser.h"
 
-#define DATA_PIN      D5
+#define DATA_PIN_1      13
+#define DATA_PIN_2      12
+#define DATA_PIN_3      14
+#define DATA_PIN_4      2
+#define DATA_PIN_5      15
 #define LED_TYPE      WS2811
-#define COLOR_ORDER   RGB
-#define NUM_LEDS      200
+#define COLOR_ORDER   GRB
+#define NUM_LEDS      50
 
-#define MILLI_AMPS         2000 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
+#define MILLI_AMPS         1000 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
 #define FRAMES_PER_SECOND  120  // here you can control the speed. With the Access Point / Web Server the animations run a bit slower.
 
 const bool apMode = false;
@@ -222,7 +226,11 @@ void setup() {
   delay(100);
   Serial.setDebugOutput(true);
 
-  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);         // for WS2812 (Neopixel)
+  FastLED.addLeds<LED_TYPE, DATA_PIN_1, COLOR_ORDER>(leds, 10);         // for WS2812 (Neopixel)
+  FastLED.addLeds<LED_TYPE, DATA_PIN_2, COLOR_ORDER>(leds, 20);         // for WS2812 (Neopixel)
+  FastLED.addLeds<LED_TYPE, DATA_PIN_3, COLOR_ORDER>(leds, 30);         // for WS2812 (Neopixel)
+  FastLED.addLeds<LED_TYPE, DATA_PIN_4, COLOR_ORDER>(leds, 20);         // for WS2812 (Neopixel)
+  FastLED.addLeds<LED_TYPE, DATA_PIN_5, COLOR_ORDER>(leds, 10);         // for WS2812 (Neopixel)
   //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS); // for APA102 (Dotstar)
   FastLED.setDither(false);
   FastLED.setCorrection(TypicalLEDStrip);
